@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "TabbyTab",
+  "version": "1.0.0",
+  "description": "Chrome extension for efficient tab management with history tracking",
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "TabbyTab"
+  },
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup/*", "history/*", "styles/*", "assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

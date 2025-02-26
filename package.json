@@ -1,0 +1,25 @@
+{
+  "name": "tabbytab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "tsc && vite build",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean && npm run copy-assets",
+    "copy-assets": "mkdir -p dist/icons && cp -r icons/* dist/icons/ && cp manifest.json dist/"
+  },
+  "dependencies": {
+    "preact": "^10.19.3"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.7.0",
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^20.10.5",
+    "esbuild": "^0.19.12",
+    "rimraf": "^5.0.10",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.10"
+  }
+}
