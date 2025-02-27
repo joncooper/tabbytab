@@ -78,12 +78,26 @@ const generatePageSummary = async (tab: chrome.tabs.Tab): Promise<string> => {
 // Get window title
 const getWindowTitle = async (windowId: number): Promise<string> => {
   try {
-    const window = await chrome.windows.get(windowId);
-    // Try to create a meaningful name
+    // First check if window exists
+    let windowExists = true;
+    try {
+      await chrome.windows.get(windowId);
+    } catch {
+      windowExists = false;
+    }
+    
+    // If window doesn't exist, return default name
+    if (!windowExists) {
+      return `Window ${windowId}`;
+    }
+    
+    // Window exists, try to get a meaningful name
     let title = `Window ${windowId}`;
     
-    if (window && !window.incognito) {
+    try {
+      // Get tabs in the window
       const tabs = await chrome.tabs.query({ windowId });
+      
       if (tabs.length > 0) {
         const activeTabs = tabs.filter(t => t.active);
         if (activeTabs.length > 0) {
@@ -92,6 +106,9 @@ const getWindowTitle = async (windowId: number): Promise<string> => {
           title = `Window: ${tabs[0].title || 'Untitled'}`;
         }
       }
+    } catch {
+      // Fallback if we can't query tabs
+      return title;
     }
     
     return title;
@@ -185,51 +202,84 @@ chrome.tabs.onUpdated.addListener((_, changeInfo, tab) => {
 // Keep a cache of tabs to reference when they're closed
 let tabCache = new Map();
 
-// Update tab cache when tabs are created or updated
-const updateTabCache = async () => {
+// Refresh the entire tab cache
+const refreshTabCache = async () => {
   try {
-    const tabs = await chrome.tabs.query({});
-    tabs.forEach(tab => {
-      if (tab.id) {
-        tabCache.set(tab.id, tab);
+    // Clear existing cache
+    tabCache.clear();
+    
+    // Get all windows
+    const windows = await chrome.windows.getAll();
+    
+    // For each window, get all tabs
+    for (const window of windows) {
+      if (window.id !== undefined) {
+        try {
+          const tabs = await chrome.tabs.query({ windowId: window.id });
+          tabs.forEach(tab => {
+            if (tab.id) {
+              tabCache.set(tab.id, tab);
+            }
+          });
+        } catch (e) {
+          console.error(`Error getting tabs for window ${window.id}:`, e);
+        }
       }
-    });
-    console.log('Tab cache updated, size:', tabCache.size);
+    }
+    
+    console.log('Tab cache refreshed, size:', tabCache.size);
   } catch (error) {
-    console.error('Error updating tab cache:', error);
+    console.error('Error refreshing tab cache:', error);
   }
 };
 
 // Initialize tab cache
-updateTabCache();
+refreshTabCache();
+
+// Set up periodic refresh to keep cache in sync
+setInterval(() => {
+  refreshTabCache();
+}, 60000); // Refresh every minute
 
 // Update cache when tabs change
 chrome.tabs.onCreated.addListener(tab => {
   if (tab.id) {
+    console.log('Tab created:', tab.id, tab.title);
     tabCache.set(tab.id, tab);
   }
 });
 
-chrome.tabs.onUpdated.addListener((_, __, tab) => {
+chrome.tabs.onUpdated.addListener((_, changeInfo, tab) => {
   if (tab.id) {
-    tabCache.set(tab.id, tab);
+    // Only update if we have meaningful changes
+    if (changeInfo.url || changeInfo.title || changeInfo.status === 'complete') {
+      console.log('Tab updated:', tab.id, tab.title);
+      tabCache.set(tab.id, tab);
+    }
   }
 });
 
 // Listen for tab removal
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   try {
-    console.log('Tab removed:', tabId);
     // Get the tab from our cache since it's already been removed
     const closedTab = tabCache.get(tabId);
     
     if (closedTab) {
-      console.log('Found closed tab in cache:', closedTab.title);
-      await storeTabHistory(closedTab, true);
+      console.log('Tab removed, found in cache:', closedTab.title);
+      
+      // Store history even if an error occurs later
+      try {
+        await storeTabHistory(closedTab, true);
+      } catch (historyError) {
+        console.error('Error storing tab history:', historyError);
+      }
+      
       // Remove from cache after storing
       tabCache.delete(tabId);
     } else {
-      console.error('Tab not found in cache:', tabId);
+      // This is expected sometimes, especially on browser startup
+      console.log('Tab removed but not found in cache:', tabId);
     }
   } catch (error) {
     console.error('Error handling tab removal:', error);
@@ -240,16 +290,26 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 chrome.windows.onRemoved.addListener(async (windowId) => {
   try {
     console.log('Window removed:', windowId);
+    
     // Find all tabs that were in this window from our cache
     const windowTabs = Array.from(tabCache.values()).filter(tab => tab.windowId === windowId);
     
     console.log(`Found ${windowTabs.length} tabs from closed window`);
     
+    if (windowTabs.length === 0) {
+      console.log(`No tabs found in cache for window ${windowId}`);
+      return;
+    }
+    
     // Record all tabs from this window as closed
     for (const tab of windowTabs) {
       if (tab.id) {
-        await storeTabHistory(tab, true);
-        tabCache.delete(tab.id);
+        try {
+          await storeTabHistory(tab, true);
+          tabCache.delete(tab.id);
+        } catch (tabError) {
+          console.error(`Error storing history for tab ${tab.id}:`, tabError);
+        }
       }
     }
   } catch (error) {
