@@ -89,7 +89,7 @@ export function TabGroup({ group, onTabClose, onGroupClose, onToggleExpand, grou
           {group.name} ({group.tabs.length})
         </h3>
         <div className="group-actions">
-          {groupBy === 'domain' && !group.name.startsWith('Window ') && (
+          {groupBy === 'domain' && !group.name.startsWith('Window ') && group.tabs.length > 1 && (
             <button
               className="move-to-window-button"
               onClick={handleMoveToNewWindow}

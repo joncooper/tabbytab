@@ -3,6 +3,9 @@
 # Install dependencies
 npm install
 
+# Generate version info
+./generate-version.sh
+
 # Clean up previous build
 rm -rf dist
 

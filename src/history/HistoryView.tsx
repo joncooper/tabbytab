@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { TabHistory, TabHistoryGroup, GroupBy } from '../types';
 import { Controls } from '../components/Controls';
+import { VERSION } from '../version';
 
 export function HistoryView() {
   const [history, setHistory] = useState<TabHistory[]>([]);
@@ -158,7 +159,13 @@ export function HistoryView() {
     <div className="history-view">
       <header className="app-header">
         <div className="header-left">
-          <h1>TabbyTab History</h1>
+          <div className="app-title">
+            <h1>TabbyTab History</h1>
+            <div className="version-info">
+              <span title="Git commit hash">v.{VERSION.commitHash}</span>
+              <span title="Build date and time">{VERSION.buildDate}</span>
+            </div>
+          </div>
           <button 
             className="refresh-button"
             onClick={loadHistory}

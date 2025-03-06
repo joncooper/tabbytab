@@ -3,6 +3,7 @@ import { TabGroup as TabGroupType, TabInfo, GroupBy } from '../types';
 import { Controls } from '../components/Controls';
 import { TabGroup } from '../components/TabGroup';
 import { ProtectedPatterns } from '../components/ProtectedPatterns';
+import { VERSION } from '../version';
 
 export function TabsView() {
   const [tabs, setTabs] = useState<TabInfo[]>([]);
@@ -177,8 +178,8 @@ export function TabsView() {
     try {
       // Process each domain group sequentially
       for (const group of groupedTabs) {
-        // Skip groups with no tabs or window groups
-        if (group.tabs.length === 0 || group.name.startsWith('Window ')) continue;
+        // Skip groups with 0 tabs, window groups, or groups with only 1 tab
+        if (group.tabs.length <= 1 || group.name.startsWith('Window ')) continue;
         
         // Create a new window with the first tab
         const firstTab = group.tabs[0];
@@ -223,7 +224,13 @@ export function TabsView() {
     <div className="tabs-view">
       <header className="app-header">
         <div className="header-left">
-          <h1>TabbyTab</h1>
+          <div className="app-title">
+            <h1>TabbyTab</h1>
+            <div className="version-info">
+              <span title="Git commit hash">v.{VERSION.commitHash}</span>
+              <span title="Build date and time">{VERSION.buildDate}</span>
+            </div>
+          </div>
           <button 
             className="refresh-button"
             onClick={loadTabs}
