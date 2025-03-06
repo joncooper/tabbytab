@@ -45,14 +45,17 @@ export function HistoryView() {
       const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
       console.log('Loaded history items:', tabHistory);
       
+      // Sort history items in reverse chronological order (newest first)
+      const sortedHistory = [...tabHistory].sort((a, b) => b.timestamp - a.timestamp);
+      
       // Check if there are summaries
-      const itemsWithSummaries = tabHistory.filter((item: TabHistory) => item.summary);
+      const itemsWithSummaries = sortedHistory.filter((item: TabHistory) => item.summary);
       console.log('Items with summaries:', itemsWithSummaries.length);
       if (itemsWithSummaries.length > 0) {
         console.log('Sample summary:', itemsWithSummaries[0].summary);
       }
       
-      setHistory(tabHistory);
+      setHistory(sortedHistory);
     } catch (error) {
       console.error('Error loading history:', error);
     }
@@ -97,7 +100,8 @@ export function HistoryView() {
     
     return Object.entries(groupedHistory).map(([name, items]) => ({
       name,
-      tabs: items,
+      // Ensure tabs within each group are also sorted by timestamp (newest first)
+      tabs: items.sort((a, b) => b.timestamp - a.timestamp),
       expanded: true
     }));
   };
