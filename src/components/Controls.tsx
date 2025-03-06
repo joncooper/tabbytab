@@ -12,6 +12,10 @@ interface ControlsProps {
 
 export function Controls({ groupBy, onGroupByChange, onSearch, onExpandAll, onCollapseAll, onMoveAllDomainsToWindows }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Debug log to see what props we're getting
+  console.log('Controls component rendered with groupBy:', groupBy);
+  console.log('onMoveAllDomainsToWindows exists:', !!onMoveAllDomainsToWindows);
 
   const handleGroupByChange = (e: Event) => {
     const target = e.target as HTMLSelectElement;
@@ -54,15 +58,14 @@ export function Controls({ groupBy, onGroupByChange, onSearch, onExpandAll, onCo
         <button onClick={onCollapseAll} className="control-button">
           Collapse All
         </button>
-        {groupBy === 'domain' && onMoveAllDomainsToWindows && (
-          <button 
-            onClick={onMoveAllDomainsToWindows} 
-            className="control-button domain-window-button"
-            title="Move each domain group to its own window"
-          >
-            One Window Per Domain
-          </button>
-        )}
+        <button 
+          onClick={onMoveAllDomainsToWindows} 
+          className="control-button domain-window-button"
+          style={{ display: groupBy === 'domain' ? 'flex' : 'none' }}
+          title="Move each domain group to its own window"
+        >
+          One Window Per Domain
+        </button>
       </div>
     </div>
   );
