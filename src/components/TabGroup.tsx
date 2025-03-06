@@ -42,6 +42,14 @@ export function TabGroup({ group, onTabClose, onGroupClose, onToggleExpand, grou
       
       if (!newWindow.id) return;
       
+      // Store the newly created tab ID from the first window
+      const firstCreatedTabId = newWindow.tabs?.[0]?.id;
+      
+      // Close the original first tab since it's been duplicated in the new window
+      if (firstCreatedTabId && firstTab.id !== firstCreatedTabId) {
+        await chrome.tabs.remove(firstTab.id);
+      }
+      
       // Move the rest of the tabs to the new window
       const tabsToMove = group.tabs.slice(1);
       if (tabsToMove.length > 0) {
@@ -54,7 +62,7 @@ export function TabGroup({ group, onTabClose, onGroupClose, onToggleExpand, grou
       
       // Refresh tabs to update the UI
       if (onRefreshTabs) {
-        setTimeout(onRefreshTabs, 500); // Add a small delay to ensure Chrome has updated the tab state
+        setTimeout(onRefreshTabs, 750); // Increased delay to ensure Chrome has fully updated the tab state
       }
       
     } catch (error) {
