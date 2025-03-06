@@ -193,6 +193,7 @@ export function HistoryView() {
       </header>
 
       <Controls 
+        groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
         onSearch={handleSearch}
         onExpandAll={handleExpandAll}
