@@ -141,6 +141,20 @@ body {
   background-color: #3d5a85;
 }
 
+.domain-window-button {
+  background-color: #4a6fa5;
+  font-weight: 500;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.domain-window-button::before {
+  content: "⊞";
+  font-size: 14px;
+}
+
 /* Tab Groups */
 .tab-groups,
 .history-groups {

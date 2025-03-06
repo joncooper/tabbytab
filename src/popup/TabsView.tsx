@@ -170,6 +170,55 @@ export function TabsView() {
     );
   };
 
+  // Function to move all domain groups to their own windows
+  const handleMoveAllDomainsToWindows = async () => {
+    if (groupBy !== 'domain') return;
+    
+    try {
+      // Process each domain group sequentially
+      for (const group of groupedTabs) {
+        // Skip groups with no tabs or window groups
+        if (group.tabs.length === 0 || group.name.startsWith('Window ')) continue;
+        
+        // Create a new window with the first tab
+        const firstTab = group.tabs[0];
+        const newWindow = await chrome.windows.create({
+          url: firstTab.url,
+          focused: false // Don't focus each new window
+        });
+        
+        if (!newWindow.id) continue;
+        
+        // Store the newly created tab ID
+        const firstCreatedTabId = newWindow.tabs?.[0]?.id;
+        
+        // Close the original first tab to avoid duplication
+        if (firstCreatedTabId && firstTab.id !== firstCreatedTabId) {
+          await chrome.tabs.remove(firstTab.id);
+        }
+        
+        // Move the remaining tabs to the new window
+        const tabsToMove = group.tabs.slice(1);
+        if (tabsToMove.length > 0) {
+          const tabIds = tabsToMove.map(tab => tab.id);
+          await chrome.tabs.move(tabIds, {
+            windowId: newWindow.id,
+            index: -1 // Append to the end
+          });
+        }
+        
+        // Add a small delay between window creations
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      // Refresh tabs after all operations complete
+      setTimeout(loadTabs, 750);
+    } catch (error) {
+      console.error('Error moving domain groups to windows:', error);
+      alert('Failed to move all domain groups to windows');
+    }
+  };
+
   return (
     <div className="tabs-view">
       <header className="app-header">
@@ -208,6 +257,7 @@ export function TabsView() {
             onSearch={handleSearch}
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
+            onMoveAllDomainsToWindows={handleMoveAllDomainsToWindows}
           />
           
           <div className="tab-groups">

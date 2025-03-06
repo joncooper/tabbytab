@@ -6,9 +6,10 @@ interface ControlsProps {
   onSearch: (query: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
+  onMoveAllDomainsToWindows?: () => void;
 }
 
-export function Controls({ onGroupByChange, onSearch, onExpandAll, onCollapseAll }: ControlsProps) {
+export function Controls({ onGroupByChange, onSearch, onExpandAll, onCollapseAll, onMoveAllDomainsToWindows }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [groupBy, setGroupBy] = useState<GroupBy>('window');
 
@@ -54,6 +55,15 @@ export function Controls({ onGroupByChange, onSearch, onExpandAll, onCollapseAll
         <button onClick={onCollapseAll} className="control-button">
           Collapse All
         </button>
+        {groupBy === 'domain' && onMoveAllDomainsToWindows && (
+          <button 
+            onClick={onMoveAllDomainsToWindows} 
+            className="control-button domain-window-button"
+            title="Move each domain group to its own window"
+          >
+            One Window Per Domain
+          </button>
+        )}
       </div>
     </div>
   );
