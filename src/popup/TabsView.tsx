@@ -253,6 +253,7 @@ export function TabsView() {
       ) : (
         <>
           <Controls 
+            groupBy={groupBy}
             onGroupByChange={handleGroupByChange}
             onSearch={handleSearch}
             onExpandAll={handleExpandAll}

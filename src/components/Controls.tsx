@@ -1,7 +1,8 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { GroupBy } from '../types';
 
 interface ControlsProps {
+  groupBy: GroupBy;
   onGroupByChange: (groupBy: GroupBy) => void;
   onSearch: (query: string) => void;
   onExpandAll: () => void;
@@ -9,14 +10,12 @@ interface ControlsProps {
   onMoveAllDomainsToWindows?: () => void;
 }
 
-export function Controls({ onGroupByChange, onSearch, onExpandAll, onCollapseAll, onMoveAllDomainsToWindows }: ControlsProps) {
+export function Controls({ groupBy, onGroupByChange, onSearch, onExpandAll, onCollapseAll, onMoveAllDomainsToWindows }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [groupBy, setGroupBy] = useState<GroupBy>('window');
 
   const handleGroupByChange = (e: Event) => {
     const target = e.target as HTMLSelectElement;
     const value = target.value as GroupBy;
-    setGroupBy(value);
     onGroupByChange(value);
   };
 

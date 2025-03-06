@@ -142,17 +142,23 @@ body {
 }
 
 .domain-window-button {
-  background-color: #4a6fa5;
+  background-color: #43617e;
   font-weight: 500;
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .domain-window-button::before {
   content: "⊞";
   font-size: 14px;
+}
+
+.domain-window-button:hover {
+  background-color: #354e66;
 }
 
 /* Tab Groups */
