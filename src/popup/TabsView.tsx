@@ -72,6 +72,17 @@ export function TabsView() {
       console.error('Error loading tabs:', error);
     }
   };
+  
+  // Helper function to get the current tab
+  const getCurrentTab = async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return tab;
+    } catch (error) {
+      console.error('Error getting current tab:', error);
+      return null;
+    }
+  };
 
   const filterTabs = (tabs: TabInfo[], query: string): TabInfo[] => {
     if (!query) return tabs;
@@ -176,13 +187,21 @@ export function TabsView() {
     if (groupBy !== 'domain') return;
     
     try {
+      // Get the current extension tab's ID to avoid closing it
+      const currentTab = await getCurrentTab();
+      const currentTabId = currentTab?.id;
+      
       // Process each domain group sequentially
       for (const group of groupedTabs) {
         // Skip groups with 0 tabs, window groups, or groups with only 1 tab
         if (group.tabs.length <= 1 || group.name.startsWith('Window ')) continue;
         
+        // Filter out the current TabbyTab tab from each group
+        const filteredTabs = group.tabs.filter(tab => tab.id !== currentTabId);
+        if (filteredTabs.length <= 1) continue;
+        
         // Create a new window with the first tab
-        const firstTab = group.tabs[0];
+        const firstTab = filteredTabs[0];
         const newWindow = await chrome.windows.create({
           url: firstTab.url,
           focused: false // Don't focus each new window
@@ -199,7 +218,7 @@ export function TabsView() {
         }
         
         // Move the remaining tabs to the new window
-        const tabsToMove = group.tabs.slice(1);
+        const tabsToMove = filteredTabs.slice(1);
         if (tabsToMove.length > 0) {
           const tabIds = tabsToMove.map(tab => tab.id);
           await chrome.tabs.move(tabIds, {
@@ -222,28 +241,38 @@ export function TabsView() {
   
   // State for range window organization
   const [minTabCount, setMinTabCount] = useState(2);
-  const [maxTabCount, setMaxTabCount] = useState(5);
   
   // Function to move domain groups to windows based on tab count range
   const handleMoveDomainsByRange = async () => {
     if (groupBy !== 'domain') return;
     
     try {
+      // Get the current extension tab's ID to avoid closing it
+      const currentTab = await getCurrentTab();
+      const currentTabId = currentTab?.id;
+      
       // Separate groups into two categories:
-      // 1. Groups within the count range - each gets its own window
-      // 2. Groups outside the count range - all go to a single window
+      // 1. Groups with tab count >= minTabCount - each gets its own window
+      // 2. Groups with tab count < minTabCount - all go to a single window
       const rangeGroups = [];
       const otherGroups = [];
       
       for (const group of groupedTabs) {
         if (group.tabs.length === 0 || group.name.startsWith('Window ')) continue;
         
-        if (group.tabs.length >= minTabCount && group.tabs.length <= maxTabCount) {
-          rangeGroups.push(group);
+        // Filter out the current TabbyTab tab from each group
+        const filteredTabs = group.tabs.filter(tab => tab.id !== currentTabId);
+        const groupWithFilteredTabs = {
+          ...group,
+          tabs: filteredTabs
+        };
+        
+        if (filteredTabs.length >= minTabCount) {
+          rangeGroups.push(groupWithFilteredTabs);
         } else {
           // Only include groups with tabs in the "other" category
-          if (group.tabs.length > 0) {
-            otherGroups.push(group);
+          if (filteredTabs.length > 0) {
+            otherGroups.push(groupWithFilteredTabs);
           }
         }
       }
@@ -381,9 +410,7 @@ export function TabsView() {
             onMoveAllDomainsToWindows={handleMoveAllDomainsToWindows}
             onMoveDomainsByRange={handleMoveDomainsByRange}
             minTabCount={minTabCount}
-            maxTabCount={maxTabCount}
             onMinTabCountChange={(value) => setMinTabCount(value)}
-            onMaxTabCountChange={(value) => setMaxTabCount(value)}
           />
           
           <div className="tab-groups">

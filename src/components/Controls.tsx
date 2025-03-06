@@ -10,9 +10,7 @@ interface ControlsProps {
   onMoveAllDomainsToWindows?: () => void;
   onMoveDomainsByRange?: () => void;
   minTabCount?: number;
-  maxTabCount?: number;
   onMinTabCountChange?: (value: number) => void;
-  onMaxTabCountChange?: (value: number) => void;
 }
 
 export function Controls({ 
@@ -24,9 +22,7 @@ export function Controls({
   onMoveAllDomainsToWindows,
   onMoveDomainsByRange,
   minTabCount = 2,
-  maxTabCount = 5,
-  onMinTabCountChange,
-  onMaxTabCountChange
+  onMinTabCountChange
 }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -47,14 +43,6 @@ export function Controls({
     const value = parseInt(target.value);
     if (onMinTabCountChange && !isNaN(value) && value >= 1) {
       onMinTabCountChange(value);
-    }
-  };
-  
-  const handleMaxTabCountChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const value = parseInt(target.value);
-    if (onMaxTabCountChange && !isNaN(value) && value >= minTabCount) {
-      onMaxTabCountChange(value);
     }
   };
 
@@ -100,25 +88,13 @@ export function Controls({
           <div className="range-window-control">
             <div className="range-inputs">
               <div className="range-input-group">
-                <label htmlFor="min-tab-count">Min:</label>
+                <label htmlFor="min-tab-count">Min Tabs:</label>
                 <input
                   id="min-tab-count"
                   type="number"
                   min="1"
-                  max={maxTabCount}
                   value={minTabCount}
                   onChange={handleMinTabCountChange}
-                  className="tab-count-input"
-                />
-              </div>
-              <div className="range-input-group">
-                <label htmlFor="max-tab-count">Max:</label>
-                <input
-                  id="max-tab-count"
-                  type="number"
-                  min={minTabCount}
-                  value={maxTabCount}
-                  onChange={handleMaxTabCountChange}
                   className="tab-count-input"
                 />
               </div>
@@ -126,9 +102,9 @@ export function Controls({
             <button 
               onClick={onMoveDomainsByRange}
               className="control-button range-window-button"
-              title="Move domains with tab counts in range to separate windows, others to a single window"
+              title="Move domains with ≥ min tabs to separate windows, others to a single window"
             >
-              <span>By Range</span>
+              <span>Move by Count</span>
             </button>
           </div>
         )}
