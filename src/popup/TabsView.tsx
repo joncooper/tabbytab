@@ -219,6 +219,119 @@ export function TabsView() {
       alert('Failed to move all domain groups to windows');
     }
   };
+  
+  // State for range window organization
+  const [minTabCount, setMinTabCount] = useState(2);
+  const [maxTabCount, setMaxTabCount] = useState(5);
+  
+  // Function to move domain groups to windows based on tab count range
+  const handleMoveDomainsByRange = async () => {
+    if (groupBy !== 'domain') return;
+    
+    try {
+      // Separate groups into two categories:
+      // 1. Groups within the count range - each gets its own window
+      // 2. Groups outside the count range - all go to a single window
+      const rangeGroups = [];
+      const otherGroups = [];
+      
+      for (const group of groupedTabs) {
+        if (group.tabs.length === 0 || group.name.startsWith('Window ')) continue;
+        
+        if (group.tabs.length >= minTabCount && group.tabs.length <= maxTabCount) {
+          rangeGroups.push(group);
+        } else {
+          // Only include groups with tabs in the "other" category
+          if (group.tabs.length > 0) {
+            otherGroups.push(group);
+          }
+        }
+      }
+      
+      // Process groups within the range - each gets its own window
+      for (const group of rangeGroups) {
+        const firstTab = group.tabs[0];
+        const newWindow = await chrome.windows.create({
+          url: firstTab.url,
+          focused: false
+        });
+        
+        if (!newWindow.id) continue;
+        
+        // Store the newly created tab ID
+        const firstCreatedTabId = newWindow.tabs?.[0]?.id;
+        
+        // Close the original first tab to avoid duplication
+        if (firstCreatedTabId && firstTab.id !== firstCreatedTabId) {
+          await chrome.tabs.remove(firstTab.id);
+        }
+        
+        // Move the remaining tabs to the new window
+        const tabsToMove = group.tabs.slice(1);
+        if (tabsToMove.length > 0) {
+          const tabIds = tabsToMove.map(tab => tab.id);
+          await chrome.tabs.move(tabIds, {
+            windowId: newWindow.id,
+            index: -1
+          });
+        }
+        
+        // Add a small delay between window creations
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      // Process other groups - all go into a single window
+      if (otherGroups.length > 0 && otherGroups.some(g => g.tabs.length > 0)) {
+        // Find the first tab from the other groups
+        const firstGroupWithTabs = otherGroups.find(g => g.tabs.length > 0);
+        if (!firstGroupWithTabs) return;
+        
+        const firstTab = firstGroupWithTabs.tabs[0];
+        const otherWindow = await chrome.windows.create({
+          url: firstTab.url,
+          focused: false
+        });
+        
+        if (!otherWindow.id) return;
+        
+        // Store the newly created tab ID
+        const firstCreatedTabId = otherWindow.tabs?.[0]?.id;
+        
+        // Close the original first tab to avoid duplication
+        if (firstCreatedTabId && firstTab.id !== firstCreatedTabId) {
+          await chrome.tabs.remove(firstTab.id);
+        }
+        
+        // Move all tabs from all other groups (excluding the first tab we already used)
+        const allTabsToMove = [];
+        
+        // First group (excluding first tab)
+        const firstGroupRemainingTabs = firstGroupWithTabs.tabs.slice(1);
+        allTabsToMove.push(...firstGroupRemainingTabs.map(tab => tab.id));
+        
+        // All tabs from all other groups
+        for (const group of otherGroups) {
+          if (group !== firstGroupWithTabs) {
+            allTabsToMove.push(...group.tabs.map(tab => tab.id));
+          }
+        }
+        
+        // Move all the tabs to the "other" window
+        if (allTabsToMove.length > 0) {
+          await chrome.tabs.move(allTabsToMove, {
+            windowId: otherWindow.id,
+            index: -1
+          });
+        }
+      }
+      
+      // Refresh tabs after all operations complete
+      setTimeout(loadTabs, 750);
+    } catch (error) {
+      console.error('Error moving domain groups by range:', error);
+      alert('Failed to move domain groups by range');
+    }
+  };
 
   return (
     <div className="tabs-view">
@@ -266,6 +379,11 @@ export function TabsView() {
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
             onMoveAllDomainsToWindows={handleMoveAllDomainsToWindows}
+            onMoveDomainsByRange={handleMoveDomainsByRange}
+            minTabCount={minTabCount}
+            maxTabCount={maxTabCount}
+            onMinTabCountChange={(value) => setMinTabCount(value)}
+            onMaxTabCountChange={(value) => setMaxTabCount(value)}
           />
           
           <div className="tab-groups">
