@@ -10,6 +10,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "noEmitOnError": true,
+    "types": ["chrome"],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,

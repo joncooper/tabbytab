@@ -11,11 +11,9 @@ We built a Chrome extension called TabbyTab for efficient tab management with hi
 - Expand/collapse tab groups
 - Reopen tabs and windows from history
 
-## Technical Implementation
 - Used TypeScript, Preact, and Vite
-- Created a robust build system with two options:
-  - `build.sh` (Vite-based)
-  - `build-fixed.sh` (esbuild-based, more reliable)
+- Created a cross-platform build system driven by npm scripts.
+- Run `npm run build` to produce the extension.
 - Implemented tab tracking using Chrome's extension APIs
 - Added automatic page summary generation
 - Created a tab cache system for handling closed tabs
@@ -25,7 +23,7 @@ We built a Chrome extension called TabbyTab for efficient tab management with hi
 - `src/popup/TabsView.tsx`: Main tab management UI
 - `src/history/HistoryView.tsx`: History tracking UI
 - `src/components/`: Reusable UI components
-- `build-fixed.sh`: Main build script
+- `package.json`: Defines the build pipeline
 
 ## Challenges Solved
 - Fixed issues with tab closure not being tracked

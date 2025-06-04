@@ -1,5 +1,5 @@
 // This file is auto-generated. Do not edit directly.
 export const VERSION = {
-  commitHash: "9e08fa4",
-  buildDate: "2025-03-06 17:00"
+  commitHash: "55c2d61",
+  buildDate: "2025-06-04 14:35"
 };

@@ -17,30 +17,22 @@ TabbyTab is a Chrome extension for efficient tab management with history trackin
 - Vite for build system
 - Chrome Extension Manifest V3
 
+The default icon set is bundled with the codebase and was adapted from
+custom TabbyTab artwork. The PNG files in `icons/` are ready for use in the
+extension.
+
 ## Installation
 
 1. Clone this repository or download the source code
-2. Add icon files to the `icons/` directory:
-   - You need icon16.png (16x16 pixels) and icon48.png (48x48 pixels)
-   - Recommended free icon sources:
-     - [Material Design Icons](https://material.io/resources/icons/) - Minimal, clean icons
-     - [Feather Icons](https://feathericons.com) - Light, simple icons
-     - [Font Awesome Free](https://fontawesome.com/icons?d=gallery&p=1&m=free) - Popular icon set with browser tab icons
-   - Download icon files using the included script:
-     ```
-     chmod +x download-icons.sh
-     ./download-icons.sh
-     ```
-   - Or use any tab-related icons from your preferred source
-3. Install dependencies:
+2. Install dependencies:
    ```
    npm install
    ```
-4. Build the extension:
+3. Build the extension:
    ```
    npm run build
    ```
-5. Load the extension in Chrome:
+4. Load the extension in Chrome:
    - Open Chrome and navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top right)
    - Click "Load unpacked" and select the `dist` directory from the project
@@ -48,27 +40,13 @@ TabbyTab is a Chrome extension for efficient tab management with history trackin
 ## Development Workflow
 
 1. Make changes to the source code
-2. Use our simplified build script which is more reliable:
+2. Build the extension:
    ```
-   chmod +x build-fixed.sh
-   ./build-fixed.sh
+   npm run build
    ```
-   This script will:
-   - Install dependencies
-   - Clean up previous build
-   - Build TypeScript files
-   - Bundle with esbuild (simpler and more reliable than Vite)
-   - Copy static assets and update HTML files
-   
-   This approach bypasses Vite's complex bundling which can sometimes cause issues with Chrome extensions.
+   This command cleans the output directory, generates version info, bundles the extension, copies assets, and updates the manifest.
 
-3. Alternatively, for the original build process:
-   ```
-   chmod +x build.sh
-   ./build.sh
-   ```
-
-4. For quick development during active work, you can also use:
+3. For quick development during active work, you can also use:
    ```
    npm run dev
    ```
@@ -93,7 +71,7 @@ TabbyTab is a Chrome extension for efficient tab management with history trackin
 
 6. When you're satisfied with your changes, build the production version:
    ```
-   ./build.sh
+   npm run build
    ```
 
 ## Troubleshooting
