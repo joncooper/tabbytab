@@ -36,3 +36,9 @@ export interface ProtectedPattern {
   pattern: string;
   enabled: boolean;
 }
+
+export interface ExportDocument {
+  id: string;
+  html: string;
+  timestamp: number;
+}

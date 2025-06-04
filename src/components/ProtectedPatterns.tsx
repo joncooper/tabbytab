@@ -50,7 +50,7 @@ export function ProtectedPatterns() {
       const updatedPatterns = [...patterns, newPatternObj];
       savePatterns(updatedPatterns);
       setNewPattern('');
-    } catch (error) {
+    } catch {
       setError('Invalid regular expression');
     }
   };
