@@ -10,6 +10,7 @@ TabbyTab is a Chrome extension for efficient tab management with history trackin
 - Tab history tracking with grouping by time, window, domain, or title
 - Search functionality for both active tabs and history
 - Expand/collapse tab groups
+- Export grouped tabs to a shareable document
 
 ## Technical Stack
 - Preact for UI components (3KB alternative to React)

@@ -177,9 +177,69 @@ export function TabsView() {
   };
 
   const handleCollapseAll = () => {
-    setGroupedTabs(prevGroups => 
+    setGroupedTabs(prevGroups =>
       prevGroups.map(group => ({ ...group, expanded: false }))
     );
+  };
+
+  const handleExportTabs = async () => {
+    try {
+      const chromeTabs = await chrome.tabs.query({});
+
+      const tabInfos = await Promise.all(
+        chromeTabs.map(async (tab) => {
+          const url = tab.url || '';
+          let domain = '';
+          try {
+            if (url) domain = new URL(url).hostname;
+          } catch { /* ignore */ }
+
+          let ogTitle = '';
+          try {
+            if (tab.id) {
+              const [res] = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => {
+                  const meta = document.querySelector(
+                    'meta[property="og:title"]'
+                  ) as HTMLMetaElement | null;
+                  return meta ? meta.content : '';
+                },
+              });
+              ogTitle = res.result as string;
+            }
+          } catch { /* ignore */ }
+
+          const title = ogTitle || `${domain} - ${tab.title || 'Untitled'}`;
+
+          return { id: tab.id || 0, url, domain, title };
+        })
+      );
+
+      const groups: Record<string, { id: number; url: string; domain: string; title: string }[]> = {};
+      tabInfos.forEach((info) => {
+        const group = info.domain || 'No Domain';
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(info);
+      });
+
+      const parts: string[] = ['<h1>Open Tabs</h1>'];
+      for (const [group, tabsIn] of Object.entries(groups)) {
+        parts.push(`<h2>${group}</h2><ul>`);
+        tabsIn.forEach((t) => {
+          parts.push(
+            `<li><a href="${t.url}" data-tabid="${t.id}">${t.title}</a></li>`
+          );
+        });
+        parts.push('</ul>');
+      }
+
+      const html = parts.join('');
+      await chrome.storage.local.set({ currentExportDoc: html });
+      chrome.tabs.create({ url: chrome.runtime.getURL('export/index.html') });
+    } catch (error) {
+      console.error('Error exporting tabs:', error);
+    }
   };
 
   // Function to move all domain groups to their own windows
@@ -382,13 +442,19 @@ export function TabsView() {
           </button>
         </div>
         <div className="header-buttons">
-          <button 
+          <button
             className="header-button"
             onClick={() => window.location.href = chrome.runtime.getURL('history/index.html')}
           >
             View History
           </button>
-          <button 
+          <button
+            className="header-button"
+            onClick={handleExportTabs}
+          >
+            Export Tabs
+          </button>
+          <button
             className="settings-button"
             onClick={() => setShowProtectedPatterns(!showProtectedPatterns)}
           >

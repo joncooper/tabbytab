@@ -686,3 +686,7 @@ body {
     max-width: 200px;
   }
 }
+.export-actions { margin-bottom: 1rem; }
+.export-content a { color: var(--primary-color); text-decoration: none; }
+.export-content a:hover { text-decoration: underline; }
+

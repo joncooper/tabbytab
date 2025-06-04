@@ -28,7 +28,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/popup/*", "src/history/*", "src/styles/*"],
+      "resources": ["src/popup/*", "src/history/*", "src/export/*", "src/styles/*"],
       "matches": ["<all_urls>"]
     }
   ]
