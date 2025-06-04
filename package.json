@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "clean": "rimraf dist",
     "prebuild": "npm run clean && npm run copy-assets",
-    "copy-assets": "mkdir -p dist/icons && cp -r icons/* dist/icons/ && cp manifest.json dist/"
+    "copy-assets": "mkdir -p dist/icons && cp -r icons/* dist/icons/ && cp manifest.json dist/",
+    "test": "node tests/smoke.test.cjs"
   },
   "dependencies": {
     "preact": "^10.19.3"
