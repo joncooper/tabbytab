@@ -11,6 +11,8 @@ interface ControlsProps {
   onMoveDomainsByRange?: () => void;
   minTabCount?: number;
   onMinTabCountChange?: (value: number) => void;
+  onExportTabs?: () => void;
+  onProfileOpenGraph?: () => void;
 }
 
 export function Controls({ 
@@ -22,7 +24,9 @@ export function Controls({
   onMoveAllDomainsToWindows,
   onMoveDomainsByRange,
   minTabCount = 2,
-  onMinTabCountChange
+  onMinTabCountChange,
+  onExportTabs,
+  onProfileOpenGraph
 }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -75,8 +79,18 @@ export function Controls({
         <button onClick={onCollapseAll} className="control-button">
           Collapse All
         </button>
-        <button 
-          onClick={onMoveAllDomainsToWindows} 
+        {onExportTabs && (
+          <button onClick={onExportTabs} className="control-button" title="Export all tabs to HTML">
+            Export Tabs
+          </button>
+        )}
+        {onProfileOpenGraph && (
+          <button onClick={onProfileOpenGraph} className="control-button" title="Analyze Open Graph tags on all tabs">
+            Profile OG Tags
+          </button>
+        )}
+        <button
+          onClick={onMoveAllDomainsToWindows}
           className="control-button domain-window-button"
           style={{ display: groupBy === 'domain' ? 'flex' : 'none' }}
           title="Move each domain group to its own window"

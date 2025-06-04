@@ -177,9 +177,101 @@ export function TabsView() {
   };
 
   const handleCollapseAll = () => {
-    setGroupedTabs(prevGroups => 
+    setGroupedTabs(prevGroups =>
       prevGroups.map(group => ({ ...group, expanded: false }))
     );
+  };
+
+  const handleProfileOpenGraph = async () => {
+    try {
+      const chromeTabs = await chrome.tabs.query({});
+      let withOg = 0;
+
+      for (const tab of chromeTabs) {
+        if (!tab.id) continue;
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            return document.querySelectorAll('meta[property^="og:"]').length;
+          }
+        });
+        const count = results[0]?.result ?? 0;
+        if (count > 0) withOg++;
+      }
+
+      const percent = chromeTabs.length
+        ? Math.round((withOg / chromeTabs.length) * 100)
+        : 0;
+      alert(`${withOg} of ${chromeTabs.length} tabs contain Open Graph meta tags (${percent}%)`);
+    } catch (err) {
+      console.error('Error profiling Open Graph tags:', err);
+    }
+  };
+
+  const handleExportTabs = async () => {
+    try {
+      const chromeTabs = await chrome.tabs.query({});
+      const now = new Date();
+      const key = `tabExport-${now.getTime()}`;
+
+      const groups: { [domain: string]: { [section: string]: chrome.tabs.Tab[] } } = {};
+
+      chromeTabs.forEach(tab => {
+        if (!tab.url) return;
+        let domain = '';
+        try {
+          domain = new URL(tab.url).hostname;
+        } catch {}
+        const pathParts = tab.url.split('/').slice(3).filter(p => p);
+        const section = pathParts[0] || '';
+
+        if (!groups[domain]) groups[domain] = {};
+        if (!groups[domain][section]) groups[domain][section] = [];
+        groups[domain][section].push(tab);
+      });
+
+      let body = '';
+      Object.entries(groups).forEach(([domain, sections]) => {
+        body += `<h2>${domain}</h2>`;
+        Object.entries(sections).forEach(([section, tabs]) => {
+          if (section) body += `<h3>${section}</h3>`;
+          body += '<ul>';
+          tabs.forEach(t => {
+            const title = t.title || t.url;
+            body += `<li><a href="${t.url}">${title}</a></li>`;
+          });
+          body += '</ul>';
+        });
+      });
+
+      const exportData = { title: `Tab Export ${now.toLocaleString()}`, body };
+      await chrome.storage.local.set({ [key]: exportData });
+
+      const exportUrl = chrome.runtime.getURL(`export/index.html?key=${key}`);
+
+      // Save to history
+      const { tabHistory: existingHistory = [] } = await chrome.storage.local.get('tabHistory');
+      const historyEntry = {
+        id: key,
+        tabInfo: {
+          id: 0,
+          title: exportData.title,
+          url: exportUrl,
+          windowId: 0,
+          domain: 'tabbytab',
+          active: false
+        },
+        timestamp: now.getTime(),
+        closed: false,
+        windowTitle: 'Tab Export'
+      };
+      existingHistory.push(historyEntry);
+      await chrome.storage.local.set({ tabHistory: existingHistory });
+
+      chrome.tabs.create({ url: exportUrl });
+    } catch (err) {
+      console.error('Error exporting tabs:', err);
+    }
   };
 
   // Function to move all domain groups to their own windows
@@ -405,13 +497,15 @@ export function TabsView() {
             groupBy={groupBy}
             onGroupByChange={handleGroupByChange}
             onSearch={handleSearch}
-            onExpandAll={handleExpandAll}
-            onCollapseAll={handleCollapseAll}
-            onMoveAllDomainsToWindows={handleMoveAllDomainsToWindows}
-            onMoveDomainsByRange={handleMoveDomainsByRange}
-            minTabCount={minTabCount}
-            onMinTabCountChange={(value) => setMinTabCount(value)}
-          />
+          onExpandAll={handleExpandAll}
+          onCollapseAll={handleCollapseAll}
+          onMoveAllDomainsToWindows={handleMoveAllDomainsToWindows}
+          onMoveDomainsByRange={handleMoveDomainsByRange}
+          minTabCount={minTabCount}
+          onMinTabCountChange={(value) => setMinTabCount(value)}
+          onExportTabs={handleExportTabs}
+          onProfileOpenGraph={handleProfileOpenGraph}
+        />
           
           <div className="tab-groups">
             {groupedTabs.length > 0 ? (

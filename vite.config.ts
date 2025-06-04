@@ -13,7 +13,8 @@ export default defineConfig({
       input: {
         background: resolve(__dirname, 'src/background/index.ts'),
         popup: resolve(__dirname, 'src/popup/index.html'),
-        history: resolve(__dirname, 'src/history/index.html')
+        history: resolve(__dirname, 'src/history/index.html'),
+        export: resolve(__dirname, 'src/export/index.html')
       },
       output: {
         entryFileNames: chunk => {
