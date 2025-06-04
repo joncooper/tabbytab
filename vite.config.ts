@@ -1,31 +1,19 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
+import { crx } from '@crxjs/vite-plugin';
 import { resolve } from 'path';
+import manifest from './manifest.json';
+import { versionPlugin } from './etc/vite-plugin-version';
 
 export default defineConfig({
-  root: 'src',
-  plugins: [preact()],
+  plugins: [
+    versionPlugin(),
+    preact(),
+    crx({ manifest })
+  ],
   build: {
-    outDir: '../dist',
-    emptyOutDir: true,
+    minify: process.env.NODE_ENV === 'production',
     sourcemap: process.env.NODE_ENV !== 'production',
-    rollupOptions: {
-      input: {
-        background: resolve(__dirname, 'src/background/index.ts'),
-        popup: resolve(__dirname, 'src/popup/index.html'),
-        history: resolve(__dirname, 'src/history/index.html'),
-      },
-      output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: assetInfo => {
-          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'styles/[name]-[hash][extname]';
-          }
-          return 'assets/[name]-[hash][extname]';
-        },
-      },
-    },
   },
   resolve: {
     alias: {
