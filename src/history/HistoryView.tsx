@@ -12,22 +12,22 @@ export function HistoryView() {
 
   useEffect(() => {
     loadHistory();
-    
+
     // Set up event listener for when tab becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         loadHistory();
       }
     };
-    
+
     // Set up event listener for window focus
     const handleFocus = () => {
       loadHistory();
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
@@ -44,40 +44,51 @@ export function HistoryView() {
     try {
       const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
       console.log('Loaded history items:', tabHistory);
-      
+
       // Sort history items in reverse chronological order (newest first)
-      const sortedHistory = [...tabHistory].sort((a, b) => b.timestamp - a.timestamp);
-      
+      const sortedHistory = [...tabHistory].sort(
+        (a, b) => b.timestamp - a.timestamp
+      );
+
       // Check if there are summaries
-      const itemsWithSummaries = sortedHistory.filter((item: TabHistory) => item.summary);
+      const itemsWithSummaries = sortedHistory.filter(
+        (item: TabHistory) => item.summary
+      );
       console.log('Items with summaries:', itemsWithSummaries.length);
       if (itemsWithSummaries.length > 0) {
         console.log('Sample summary:', itemsWithSummaries[0].summary);
       }
-      
+
       setHistory(sortedHistory);
     } catch (error) {
       console.error('Error loading history:', error);
     }
   };
 
-  const filterHistory = (history: TabHistory[], query: string): TabHistory[] => {
+  const filterHistory = (
+    history: TabHistory[],
+    query: string
+  ): TabHistory[] => {
     if (!query) return history;
-    
+
     const lowerQuery = query.toLowerCase();
-    return history.filter(item => 
-      item.tabInfo.title.toLowerCase().includes(lowerQuery) || 
-      item.tabInfo.url.toLowerCase().includes(lowerQuery) ||
-      item.tabInfo.domain.toLowerCase().includes(lowerQuery)
+    return history.filter(
+      (item) =>
+        item.tabInfo.title.toLowerCase().includes(lowerQuery) ||
+        item.tabInfo.url.toLowerCase().includes(lowerQuery) ||
+        item.tabInfo.domain.toLowerCase().includes(lowerQuery)
     );
   };
 
-  const groupHistory = (history: TabHistory[], groupBy: GroupBy): TabHistoryGroup[] => {
+  const groupHistory = (
+    history: TabHistory[],
+    groupBy: GroupBy
+  ): TabHistoryGroup[] => {
     const groupedHistory: { [key: string]: TabHistory[] } = {};
-    
-    history.forEach(item => {
+
+    history.forEach((item) => {
       let groupName = '';
-      
+
       switch (groupBy) {
         case 'window':
           groupName = `Window ${item.tabInfo.windowId}`;
@@ -90,19 +101,19 @@ export function HistoryView() {
           groupName = item.tabInfo.title.split(' ')[0] || 'Untitled';
           break;
       }
-      
+
       if (!groupedHistory[groupName]) {
         groupedHistory[groupName] = [];
       }
-      
+
       groupedHistory[groupName].push(item);
     });
-    
+
     return Object.entries(groupedHistory).map(([name, items]) => ({
       name,
       // Ensure tabs within each group are also sorted by timestamp (newest first)
       tabs: items.sort((a, b) => b.timestamp - a.timestamp),
-      expanded: true
+      expanded: true,
     }));
   };
 
@@ -115,9 +126,9 @@ export function HistoryView() {
   };
 
   const handleToggleExpand = (groupName: string) => {
-    setGroupedHistory(prevGroups => 
-      prevGroups.map(group => 
-        group.name === groupName 
+    setGroupedHistory((prevGroups) =>
+      prevGroups.map((group) =>
+        group.name === groupName
           ? { ...group, expanded: !group.expanded }
           : group
       )
@@ -125,20 +136,20 @@ export function HistoryView() {
   };
 
   const handleExpandAll = () => {
-    setGroupedHistory(prevGroups => 
-      prevGroups.map(group => ({ ...group, expanded: true }))
+    setGroupedHistory((prevGroups) =>
+      prevGroups.map((group) => ({ ...group, expanded: true }))
     );
   };
 
   const handleCollapseAll = () => {
-    setGroupedHistory(prevGroups => 
-      prevGroups.map(group => ({ ...group, expanded: false }))
+    setGroupedHistory((prevGroups) =>
+      prevGroups.map((group) => ({ ...group, expanded: false }))
     );
   };
-  
+
   // Pass showSummaries to the HistoryGroup components
   const renderHistoryGroups = () => {
-    return groupedHistory.map(group => (
+    return groupedHistory.map((group) => (
       <HistoryGroup
         key={group.name}
         group={group}
@@ -170,7 +181,7 @@ export function HistoryView() {
               <span title="Build date and time">{VERSION.buildDate}</span>
             </div>
           </div>
-          <button 
+          <button
             className="refresh-button"
             onClick={loadHistory}
             title="Refresh history"
@@ -179,44 +190,48 @@ export function HistoryView() {
           </button>
         </div>
         <div className="header-buttons">
-          <button 
+          <button
             className="header-button"
-            onClick={() => window.location.href = chrome.runtime.getURL('popup/index.html')}
+            onClick={() =>
+              (window.location.href = chrome.runtime.getURL('popup/index.html'))
+            }
           >
             View Tabs
           </button>
-          <button 
+          <button
             className={`toggle-summaries-button ${showSummaries ? 'summaries-shown' : 'summaries-hidden'}`}
             onClick={() => {
-              console.log('Toggle summaries clicked, current state:', showSummaries);
+              console.log(
+                'Toggle summaries clicked, current state:',
+                showSummaries
+              );
               setShowSummaries(!showSummaries);
             }}
           >
             {showSummaries ? '✓ Summaries Shown' : '⊕ Show Summaries'}
           </button>
-          <button 
-            className="clear-history-button"
-            onClick={handleClearHistory}
-          >
+          <button className="clear-history-button" onClick={handleClearHistory}>
             Clear History
           </button>
         </div>
       </header>
 
-      <Controls 
+      <Controls
         groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
         onSearch={handleSearch}
         onExpandAll={handleExpandAll}
         onCollapseAll={handleCollapseAll}
       />
-      
+
       <div className="history-groups">
         {groupedHistory.length > 0 ? (
           renderHistoryGroups()
         ) : (
           <div className="empty-state">
-            {searchQuery ? 'No history items match your search' : 'No tab history found'}
+            {searchQuery
+              ? 'No history items match your search'
+              : 'No tab history found'}
           </div>
         )}
       </div>
@@ -230,33 +245,37 @@ interface HistoryGroupProps {
   showSummaries: boolean;
 }
 
-function HistoryGroup({ group, onToggleExpand, showSummaries }: HistoryGroupProps) {
+function HistoryGroup({
+  group,
+  onToggleExpand,
+  showSummaries,
+}: HistoryGroupProps) {
   const handleToggleExpand = () => {
     onToggleExpand(group.name);
   };
-  
+
   const handleReopenWindow = async () => {
     if (group.tabs.length === 0) return;
-    
+
     try {
       // Create a new window with the first tab
       const firstTab = group.tabs[0];
       const newWindow = await chrome.windows.create({
         url: firstTab.tabInfo.url,
-        focused: true
+        focused: true,
       });
-      
+
       // Open the remaining tabs in the same window
       if (newWindow.id && group.tabs.length > 1) {
         for (let i = 1; i < group.tabs.length; i++) {
           await chrome.tabs.create({
             windowId: newWindow.id,
             url: group.tabs[i].tabInfo.url,
-            active: false
+            active: false,
           });
         }
       }
-      
+
       console.log(`Reopened ${group.tabs.length} tabs in a new window`);
     } catch (error) {
       console.error('Error reopening window:', error);
@@ -266,15 +285,17 @@ function HistoryGroup({ group, onToggleExpand, showSummaries }: HistoryGroupProp
   return (
     <div className="history-group">
       <div className="group-header">
-        <button 
+        <button
           className={`expand-button ${group.expanded ? 'expanded' : ''}`}
           onClick={handleToggleExpand}
         >
           {group.expanded ? '▼' : '►'}
         </button>
-        <h3 className="group-title">{group.name} ({group.tabs.length})</h3>
-        
-        <button 
+        <h3 className="group-title">
+          {group.name} ({group.tabs.length})
+        </h3>
+
+        <button
           className="reopen-window-button"
           onClick={handleReopenWindow}
           title="Reopen all tabs in a new window"
@@ -282,12 +303,12 @@ function HistoryGroup({ group, onToggleExpand, showSummaries }: HistoryGroupProp
           Reopen Group
         </button>
       </div>
-      
+
       {group.expanded && (
         <ul className="history-list">
           {group.tabs.map((historyItem) => (
-            <HistoryItem 
-              key={historyItem.id} 
+            <HistoryItem
+              key={historyItem.id}
               historyItem={historyItem}
               showSummaries={showSummaries}
             />
@@ -306,7 +327,7 @@ interface HistoryItemProps {
 function HistoryItem({ historyItem, showSummaries }: HistoryItemProps) {
   const { tabInfo, timestamp, closed, windowTitle, summary } = historyItem;
   const formattedDate = new Date(timestamp).toLocaleString();
-  
+
   const handleReopenTab = (e: MouseEvent) => {
     e.preventDefault();
     chrome.tabs.create({ url: tabInfo.url });
@@ -323,7 +344,7 @@ function HistoryItem({ historyItem, showSummaries }: HistoryItemProps) {
       </div>
       <div className="history-content">
         <div className="history-item-header">
-          <a 
+          <a
             href={tabInfo.url}
             className="history-link"
             title={tabInfo.title}
@@ -331,8 +352,8 @@ function HistoryItem({ historyItem, showSummaries }: HistoryItemProps) {
           >
             {tabInfo.title}
           </a>
-          <button 
-            className="reopen-button" 
+          <button
+            className="reopen-button"
             onClick={handleReopenTab}
             title="Reopen this tab"
           >

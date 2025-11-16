@@ -13,16 +13,16 @@ interface ControlsProps {
   onMinTabCountChange?: (value: number) => void;
 }
 
-export function Controls({ 
-  groupBy, 
-  onGroupByChange, 
-  onSearch, 
-  onExpandAll, 
-  onCollapseAll, 
+export function Controls({
+  groupBy,
+  onGroupByChange,
+  onSearch,
+  onExpandAll,
+  onCollapseAll,
   onMoveAllDomainsToWindows,
   onMoveDomainsByRange,
   minTabCount = 2,
-  onMinTabCountChange
+  onMinTabCountChange,
 }: ControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,7 +37,7 @@ export function Controls({
     setSearchQuery(target.value);
     onSearch(target.value);
   };
-  
+
   const handleMinTabCountChange = (e: Event) => {
     const target = e.target as HTMLInputElement;
     const value = parseInt(target.value);
@@ -75,15 +75,15 @@ export function Controls({
         <button onClick={onCollapseAll} className="control-button">
           Collapse All
         </button>
-        <button 
-          onClick={onMoveAllDomainsToWindows} 
+        <button
+          onClick={onMoveAllDomainsToWindows}
           className="control-button domain-window-button"
           style={{ display: groupBy === 'domain' ? 'flex' : 'none' }}
           title="Move each domain group to its own window"
         >
           One Window Per Domain
         </button>
-        
+
         {groupBy === 'domain' && onMoveDomainsByRange && (
           <div className="range-window-control">
             <div className="range-inputs">
@@ -99,7 +99,7 @@ export function Controls({
                 />
               </div>
             </div>
-            <button 
+            <button
               onClick={onMoveDomainsByRange}
               className="control-button range-window-button"
               title="Move domains with ≥ min tabs to separate windows, others to a single window"

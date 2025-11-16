@@ -12,7 +12,8 @@ export function ProtectedPatterns() {
 
   const loadPatterns = async () => {
     try {
-      const { protectedPatterns = [] } = await chrome.storage.local.get('protectedPatterns');
+      const { protectedPatterns = [] } =
+        await chrome.storage.local.get('protectedPatterns');
       setPatterns(protectedPatterns);
     } catch (error) {
       console.error('Error loading protected patterns:', error);
@@ -40,40 +41,41 @@ export function ProtectedPatterns() {
     try {
       // Test if the pattern is a valid regex
       new RegExp(newPattern);
-      
+
       const newPatternObj: ProtectedPattern = {
         id: Date.now().toString(),
         pattern: newPattern,
-        enabled: true
+        enabled: true,
       };
-      
+
       const updatedPatterns = [...patterns, newPatternObj];
       savePatterns(updatedPatterns);
       setNewPattern('');
     } catch (error) {
+      console.error('Invalid regex pattern:', error);
       setError('Invalid regular expression');
     }
   };
 
   const handleTogglePattern = (id: string) => {
-    const updatedPatterns = patterns.map(pattern => 
-      pattern.id === id 
-        ? { ...pattern, enabled: !pattern.enabled }
-        : pattern
+    const updatedPatterns = patterns.map((pattern) =>
+      pattern.id === id ? { ...pattern, enabled: !pattern.enabled } : pattern
     );
     savePatterns(updatedPatterns);
   };
 
   const handleDeletePattern = (id: string) => {
-    const updatedPatterns = patterns.filter(pattern => pattern.id !== id);
+    const updatedPatterns = patterns.filter((pattern) => pattern.id !== id);
     savePatterns(updatedPatterns);
   };
 
   return (
     <div className="protected-patterns">
       <h2>Protected URL Patterns</h2>
-      <p>Add regex patterns to prevent accidental tab closure for matching URLs</p>
-      
+      <p>
+        Add regex patterns to prevent accidental tab closure for matching URLs
+      </p>
+
       <div className="pattern-input">
         <input
           type="text"
@@ -89,11 +91,11 @@ export function ProtectedPatterns() {
           Add Pattern
         </button>
       </div>
-      
+
       {error && <div className="error-message">{error}</div>}
-      
+
       <ul className="patterns-list">
-        {patterns.map(pattern => (
+        {patterns.map((pattern) => (
           <li key={pattern.id} className="pattern-item">
             <label className="pattern-toggle">
               <input
@@ -101,7 +103,9 @@ export function ProtectedPatterns() {
                 checked={pattern.enabled}
                 onChange={() => handleTogglePattern(pattern.id)}
               />
-              <span className="toggle-label">{pattern.enabled ? 'Enabled' : 'Disabled'}</span>
+              <span className="toggle-label">
+                {pattern.enabled ? 'Enabled' : 'Disabled'}
+              </span>
             </label>
             <span className="pattern-text">{pattern.pattern}</span>
             <button
@@ -114,7 +118,7 @@ export function ProtectedPatterns() {
           </li>
         ))}
       </ul>
-      
+
       {patterns.length === 0 && (
         <div className="empty-state">No protected patterns defined</div>
       )}
