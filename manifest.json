@@ -16,7 +16,8 @@
   },
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "downloads"
   ],
   "icons": {
     "16": "icons/icon16.png",
@@ -28,7 +29,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/popup/*", "src/history/*", "src/styles/*"],
+      "resources": ["src/popup/*", "src/history/*", "src/settings/*", "src/styles/*"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -410,6 +410,17 @@ export function TabsView() {
           >
             {showProtectedPatterns ? 'Show Tabs' : 'Protected Patterns'}
           </button>
+          <button
+            className="header-button"
+            onClick={() =>
+              (window.location.href = chrome.runtime.getURL(
+                'settings/index.html'
+              ))
+            }
+            title="Sync & Export Settings"
+          >
+            ⚙ Settings
+          </button>
         </div>
       </header>
 

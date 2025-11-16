@@ -1,4 +1,15 @@
 import { TabHistory, ProtectedPattern } from '../types';
+import {
+  syncTabsToSupabase,
+  getSyncStats,
+  triggerManualSync,
+} from './sync-service';
+import {
+  exportTabHistory,
+  downloadExportFile,
+  getExportStats,
+} from './export-service';
+import { getSyncConfig } from '../lib/supabase-client';
 
 // Handle browser action click to open in a new tab instead of popup
 chrome.action.onClicked.addListener(() => {
@@ -364,5 +375,114 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
 
     return true; // Keep the message channel open for the async response
   }
+
+  // Sync-related messages
+  if (message.action === 'triggerSync') {
+    triggerManualSync()
+      .then((result) => {
+        sendResponse(result);
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          message: error instanceof Error ? error.message : 'Sync failed',
+        });
+      });
+    return true;
+  }
+
+  if (message.action === 'getSyncStats') {
+    getSyncStats()
+      .then((stats) => {
+        sendResponse({ success: true, stats });
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      });
+    return true;
+  }
+
+  // Export-related messages
+  if (message.action === 'exportHistory') {
+    exportTabHistory(message.options)
+      .then((result) => {
+        if (result.success && result.data) {
+          // Trigger download
+          downloadExportFile(result.data, message.options.format);
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false, error: result.error });
+        }
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : 'Export failed',
+        });
+      });
+    return true;
+  }
+
+  if (message.action === 'getExportStats') {
+    getExportStats()
+      .then((stats) => {
+        sendResponse({ success: true, stats });
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      });
+    return true;
+  }
+
   return false;
+});
+
+// ========================================
+// Sync Service Integration
+// ========================================
+
+let syncIntervalId: number | null = null;
+
+/**
+ * Initialize sync service on extension startup
+ */
+async function initializeSyncService() {
+  const config = await getSyncConfig();
+
+  if (config.enabled && config.autoSync) {
+    // Initial sync on startup
+    console.log('Running initial sync...');
+    await syncTabsToSupabase();
+
+    // Set up periodic sync
+    if (syncIntervalId) {
+      clearInterval(syncIntervalId);
+    }
+
+    syncIntervalId = setInterval(() => {
+      console.log('Running periodic sync...');
+      syncTabsToSupabase();
+    }, config.syncInterval) as unknown as number;
+
+    console.log(
+      `Sync service initialized. Will sync every ${config.syncInterval / 1000 / 60} minutes`
+    );
+  }
+}
+
+// Start sync service when background script loads
+initializeSyncService();
+
+// Re-initialize when storage changes (e.g., user updates settings)
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.syncConfig) {
+    console.log('Sync config changed, reinitializing...');
+    initializeSyncService();
+  }
 });
