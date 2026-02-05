@@ -1,5 +1,11 @@
 import { getSupabaseClient, getSyncConfig } from '../lib/supabase-client';
 import type { TabHistory, SyncStats } from '../types';
+import {
+  getUnsyncedTabs as getUnsyncedTabsFromDB,
+  markTabsSynced,
+  pruneOlderThan,
+  getAllTabHistory,
+} from '../lib/tab-history-db';
 
 const BATCH_SIZE = 100; // Sync 100 tabs at a time
 const MAX_RETRIES = 3;
@@ -121,8 +127,7 @@ export async function syncTabsToSupabase(): Promise<{
  */
 async function getUnsyncedTabs(): Promise<TabHistory[]> {
   try {
-    const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
-    return tabHistory.filter((tab: TabHistory) => !tab.synced);
+    return await getUnsyncedTabsFromDB();
   } catch (error) {
     console.error('Error getting unsynced tabs:', error);
     return [];
@@ -130,25 +135,18 @@ async function getUnsyncedTabs(): Promise<TabHistory[]> {
 }
 
 /**
- * Mark tabs as synced in local storage
+ * Mark tabs as synced in IndexedDB
  */
 async function markTabsAsSynced(tabIds: string[]): Promise<void> {
   try {
-    const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
-    const now = Date.now();
-
-    const updated = tabHistory.map((tab: TabHistory) =>
-      tabIds.includes(tab.id) ? { ...tab, synced: true, syncedAt: now } : tab
-    );
-
-    await chrome.storage.local.set({ tabHistory: updated });
+    await markTabsSynced(tabIds);
   } catch (error) {
     console.error('Error marking tabs as synced:', error);
   }
 }
 
 /**
- * Prune old synced tabs from local storage based on retention policy
+ * Prune old synced tabs from IndexedDB based on retention policy
  */
 async function pruneLocalHistory(): Promise<void> {
   try {
@@ -159,18 +157,10 @@ async function pruneLocalHistory(): Promise<void> {
 
     const cutoffTime =
       Date.now() - config.localRetentionDays * 24 * 60 * 60 * 1000;
-    const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
+    const pruned = await pruneOlderThan(cutoffTime);
 
-    // Keep unsynced tabs or tabs within retention period
-    const filtered = tabHistory.filter(
-      (tab: TabHistory) => !tab.synced || tab.timestamp > cutoffTime
-    );
-
-    if (filtered.length < tabHistory.length) {
-      await chrome.storage.local.set({ tabHistory: filtered });
-      console.log(
-        `Pruned ${tabHistory.length - filtered.length} old synced tabs from local storage`
-      );
+    if (pruned > 0) {
+      console.log(`Pruned ${pruned} old synced tabs from IndexedDB`);
     }
   } catch (error) {
     console.error('Error pruning local history:', error);
@@ -201,7 +191,7 @@ async function updateSyncStats(updates: Partial<SyncStats>): Promise<void> {
 export async function getSyncStats(): Promise<SyncStats> {
   try {
     const { syncStats = {} } = await chrome.storage.local.get('syncStats');
-    const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
+    const tabHistory = await getAllTabHistory();
 
     const pendingSync = tabHistory.filter(
       (tab: TabHistory) => !tab.synced

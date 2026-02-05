@@ -2,6 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { TabHistory, TabHistoryGroup, GroupBy } from '../types';
 import { Controls } from '../components/Controls';
 import { VERSION } from '../version';
+import { getAllTabHistory, clearAllTabHistory } from '../lib/tab-history-db';
 
 export function HistoryView() {
   const [history, setHistory] = useState<TabHistory[]>([]);
@@ -42,23 +43,7 @@ export function HistoryView() {
 
   const loadHistory = async () => {
     try {
-      const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
-      console.log('Loaded history items:', tabHistory);
-
-      // Sort history items in reverse chronological order (newest first)
-      const sortedHistory = [...tabHistory].sort(
-        (a, b) => b.timestamp - a.timestamp
-      );
-
-      // Check if there are summaries
-      const itemsWithSummaries = sortedHistory.filter(
-        (item: TabHistory) => item.summary
-      );
-      console.log('Items with summaries:', itemsWithSummaries.length);
-      if (itemsWithSummaries.length > 0) {
-        console.log('Sample summary:', itemsWithSummaries[0].summary);
-      }
-
+      const sortedHistory = await getAllTabHistory();
       setHistory(sortedHistory);
     } catch (error) {
       console.error('Error loading history:', error);
@@ -162,7 +147,7 @@ export function HistoryView() {
   const handleClearHistory = async () => {
     if (confirm('Are you sure you want to clear all tab history?')) {
       try {
-        await chrome.storage.local.set({ tabHistory: [] });
+        await clearAllTabHistory();
         setHistory([]);
       } catch (error) {
         console.error('Error clearing history:', error);

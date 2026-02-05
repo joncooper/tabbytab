@@ -1,5 +1,6 @@
 import { getSupabaseClient, getSyncConfig } from '../lib/supabase-client';
 import type { TabHistory, ExportOptions } from '../types';
+import { getFilteredTabHistory, getAllTabHistory } from '../lib/tab-history-db';
 
 /**
  * Export tab history in various formats for LLM processing
@@ -121,27 +122,16 @@ async function getTabHistoryFromSupabase(
 }
 
 /**
- * Get tab history from local storage
+ * Get tab history from IndexedDB
  */
 async function getTabHistoryFromLocal(
   options: ExportOptions
 ): Promise<TabHistory[]> {
-  const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
-
-  return tabHistory.filter((tab: TabHistory) => {
-    if (options.dateFrom && tab.timestamp < options.dateFrom) return false;
-    if (options.dateTo && tab.timestamp > options.dateTo) return false;
-    if (
-      options.includeClosed !== undefined &&
-      tab.closed !== options.includeClosed
-    )
-      return false;
-    if (
-      options.includeActive !== undefined &&
-      !tab.closed !== options.includeActive
-    )
-      return false;
-    return true;
+  return getFilteredTabHistory({
+    dateFrom: options.dateFrom,
+    dateTo: options.dateTo,
+    includeClosed: options.includeClosed,
+    includeActive: options.includeActive,
   });
 }
 
@@ -151,7 +141,7 @@ async function getTabHistoryFromLocal(
 function exportAsJSONL(tabs: TabHistory[]): string {
   return tabs
     .map((tab) => {
-      const record = {
+      const record: Record<string, unknown> = {
         id: tab.id,
         url: tab.tabInfo.url,
         domain: tab.tabInfo.domain,
@@ -161,6 +151,9 @@ function exportAsJSONL(tabs: TabHistory[]): string {
         closed: tab.closed,
         windowTitle: tab.windowTitle || '',
       };
+      if (tab.pageContent) {
+        record.pageContent = tab.pageContent;
+      }
       return JSON.stringify(record);
     })
     .join('\n');
@@ -270,8 +263,7 @@ export async function getExportStats(): Promise<{
       includeActive: true,
     });
   } else {
-    const { tabHistory = [] } = await chrome.storage.local.get('tabHistory');
-    tabs = tabHistory;
+    tabs = await getAllTabHistory();
   }
 
   const closedTabs = tabs.filter((t) => t.closed).length;

@@ -10,6 +10,8 @@ import {
   getExportStats,
 } from './export-service';
 import { getSyncConfig } from '../lib/supabase-client';
+import { putTabHistory, migrateFromChromeStorage } from '../lib/tab-history-db';
+import { extractPageContent } from '../content/extract-content';
 
 // Handle browser action click to open in a new tab instead of popup
 chrome.action.onClicked.addListener(() => {
@@ -132,7 +134,25 @@ const getWindowTitle = async (windowId: number): Promise<string> => {
   }
 };
 
-// Store tab history
+// Extract page content from a live tab using chrome.scripting.executeScript.
+// Returns empty string if extraction fails (e.g., chrome:// pages, permissions).
+const extractContentFromTab = async (tabId: number): Promise<string> => {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: extractPageContent,
+    });
+    return results?.[0]?.result || '';
+  } catch {
+    // Expected to fail on chrome://, chrome-extension://, etc.
+    return '';
+  }
+};
+
+// Store tab history — writes a single record to IndexedDB.
+// While a tab is open, its record is updated in place (keyed by "tab-{tabId}").
+// When closed, a new record is created with a timestamped key so the
+// open-tab slot is freed for reuse.
 const storeTabHistory = async (
   tab: chrome.tabs.Tab,
   closed: boolean = false
@@ -156,13 +176,16 @@ const storeTabHistory = async (
     let summary = '';
     try {
       summary = await generatePageSummary(tab);
-      console.log('Generated summary for tab', tab.id, summary);
     } catch (error) {
       console.error('Error generating summary:', error);
     }
 
+    // When open: use stable key so navigations update in place.
+    // When closed: use timestamped key to create a permanent record.
+    const id = closed ? `${tab.id}-${Date.now()}` : `tab-${tab.id}`;
+
     const tabHistory: TabHistory = {
-      id: `${tab.id}-${Date.now()}`,
+      id,
       tabInfo: {
         id: tab.id || 0,
         title: tab.title || 'Untitled',
@@ -178,11 +201,15 @@ const storeTabHistory = async (
       summary,
     };
 
-    const { tabHistory: existingHistory = [] } =
-      await chrome.storage.local.get('tabHistory');
-    existingHistory.push(tabHistory);
+    // Attach cached page content if we have it
+    if (tab.id && pageContentCache.has(tab.id)) {
+      tabHistory.pageContent = pageContentCache.get(tab.id);
+      if (closed) {
+        pageContentCache.delete(tab.id);
+      }
+    }
 
-    await chrome.storage.local.set({ tabHistory: existingHistory });
+    await putTabHistory(tabHistory);
   } catch (error) {
     console.error('Error storing tab history:', error);
   }
@@ -222,6 +249,10 @@ chrome.tabs.onUpdated.addListener((_, changeInfo, tab) => {
   }
 });
 
+// Cache of extracted page content, keyed by tab ID.
+// Populated when a page finishes loading, consumed when the tab is stored.
+const pageContentCache = new Map<number, string>();
+
 // Keep a cache of tabs to reference when they're closed
 let tabCache = new Map();
 
@@ -259,10 +290,24 @@ const refreshTabCache = async () => {
 // Initialize tab cache
 refreshTabCache();
 
-// Set up periodic refresh to keep cache in sync
-setInterval(() => {
-  refreshTabCache();
-}, 60000); // Refresh every minute
+// Migrate from chrome.storage.local to IndexedDB on first run
+migrateFromChromeStorage().then((count) => {
+  if (count > 0) {
+    console.log(`Migration complete: ${count} entries moved to IndexedDB`);
+  }
+});
+
+// Set up periodic refresh using chrome.alarms (survives SW restarts)
+chrome.alarms.create('cache-refresh', { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'cache-refresh') {
+    refreshTabCache();
+  }
+  if (alarm.name === 'supabase-sync') {
+    console.log('Running periodic sync...');
+    syncTabsToSupabase();
+  }
+});
 
 // Update cache when tabs change
 chrome.tabs.onCreated.addListener((tab) => {
@@ -280,8 +325,16 @@ chrome.tabs.onUpdated.addListener((_, changeInfo, tab) => {
       changeInfo.title ||
       changeInfo.status === 'complete'
     ) {
-      console.log('Tab updated:', tab.id, tab.title);
       tabCache.set(tab.id, tab);
+    }
+
+    // Extract page content when loading completes
+    if (changeInfo.status === 'complete' && tab.id && tab.url?.startsWith('http')) {
+      extractContentFromTab(tab.id).then((content) => {
+        if (content) {
+          pageContentCache.set(tab.id!, content);
+        }
+      });
     }
   }
 });
@@ -447,8 +500,6 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
 // Sync Service Integration
 // ========================================
 
-let syncIntervalId: number | null = null;
-
 /**
  * Initialize sync service on extension startup
  */
@@ -460,19 +511,16 @@ async function initializeSyncService() {
     console.log('Running initial sync...');
     await syncTabsToSupabase();
 
-    // Set up periodic sync
-    if (syncIntervalId) {
-      clearInterval(syncIntervalId);
-    }
-
-    syncIntervalId = setInterval(() => {
-      console.log('Running periodic sync...');
-      syncTabsToSupabase();
-    }, config.syncInterval) as unknown as number;
+    // Set up periodic sync via chrome.alarms (survives SW restarts)
+    const periodInMinutes = Math.max(1, config.syncInterval / 1000 / 60);
+    chrome.alarms.create('supabase-sync', { periodInMinutes });
 
     console.log(
-      `Sync service initialized. Will sync every ${config.syncInterval / 1000 / 60} minutes`
+      `Sync service initialized. Will sync every ${periodInMinutes} minutes`
     );
+  } else {
+    // Clear the alarm if sync is disabled
+    chrome.alarms.clear('supabase-sync');
   }
 }
 

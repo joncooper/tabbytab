@@ -21,6 +21,7 @@ export interface TabHistory {
   closed: boolean;
   windowTitle?: string;
   summary?: string;
+  pageContent?: string; // Extracted main text content from the page (via Readability)
   synced?: boolean; // Whether this tab has been synced to remote storage
   syncedAt?: number; // Timestamp when synced
 }

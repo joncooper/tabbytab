@@ -18,6 +18,7 @@
     "test": "node tests/smoke.test.cjs"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "^2.81.1",
     "preact": "^10.19.3"
   },
